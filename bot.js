@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, PermissionFlagsBits } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -10,7 +10,10 @@ const client = new Client({
 });
 
 // ↓↓↓ Cambia esto ↓↓↓
-const CANAL_ID = '1560822216625627277';
+const CANAL_ID = '1561527642908270682';
+
+// Contador global de mensajes borrados
+let totalBorrados = 0;
 
 client.on('ready', () => {
   console.log(`Bot listo como: ${client.user.tag}`);
@@ -21,22 +24,31 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (message.channel.id !== CANAL_ID) return;
 
+  // Ignorar administradores
+  if (message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+    return;
+  }
+
   try {
-    // Si tiene stickers, archivos, embeds o no tiene texto → solo borrar
-    if (
-      message.stickers.size > 0 ||
-      message.attachments.size > 0 ||
-      message.embeds.length > 0 ||
-      !message.content.trim()
-    ) {
-      await message.delete();
+    const contenido = message.content.trim();
+
+    // Si el mensaje empieza con / o $ → lo dejamos pasar
+    if (contenido.startsWith('/') || contenido.startsWith('$')) {
       return;
     }
 
-    // Es solo texto (con o sin emojis) → borrar y reenviar
-    const contenido = message.content;
+    // Aumentar el contador global
+    totalBorrados++;
+
+    // Enviar mensaje personalizado en el 1.er mensaje y cada 10 más (1, 11, 21...)
+    if (totalBorrados === 1 || totalBorrados % 10 === 1) {
+      await message.channel.send(
+        `This channel only admits Mudae commands, any other message will be lost in the void.`
+      );
+    }
+
+    // Borrar el mensaje no permitido
     await message.delete();
-    await message.channel.send(contenido);
 
   } catch (error) {
     console.error('Error al procesar el mensaje:', error);
